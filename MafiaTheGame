@@ -1,19 +1,36 @@
 from pygame import *
+from time import time as timer
 from random import randint
 
 font.init()
+font1 = font.SysFont('Arial', 80)
+font2 = font.SysFont('Arial', 36)
+win = font1.render('YOU WIN!', True, (255, 255, 255))
+lose = font1.render('YOU LOSE!', True, (180, 0, 0))
+
+img_back = 'town.png'
+img_mafia = 'mafia.png'
+img_enemy = 'enemy.png'
+img_bullet = 'bullet.png'
+img_laying = 'mafialaying.png'
+img_enemy_bullet = 'enemybullet.png'
+life = 1
+lost = 0
+max_lost = 1
+goal = 100
+score = 0
+laying = 0
 
 # класс-родитель для других спрайтов
 class GameSprite(sprite.Sprite):
  # конструктор класса
-    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed_x, player_speed_y):
+    def __init__(self, player_image, player_x, player_y, size_x, size_y, player_speed):
         # Вызываем конструктор класса (Sprite):
         sprite.Sprite.__init__(self)
 
         # каждый спрайт должен хранить свойство image - изображение
         self.image = transform.scale(image.load(player_image), (size_x, size_y))
-        self.speedx = player_speed_x
-        self.speedy = player_speed_y
+        self.speed = player_speed
 
         # каждый спрайт должен хранить свойство rect - прямоугольник, в который он вписан
         self.rect = self.image.get_rect()
@@ -32,33 +49,44 @@ class Player(GameSprite):
     def update(self):
         keys = key.get_pressed()
         if keys[K_a] and self.rect.top > 0:
-            self.rect.x -= self.speedy
+            self.rect.x -= self.speed
         if keys[K_d] and self.rect.bottom < win_width:
-            self.rect.x += self.speedy
+            self.rect.x += self.speed
     def fire(self):
-        bullet = Bullet(img_bullet, self.rect.centery, self.rect.right, 15, 20, -15)
+        bullet = Bullet(img_bullet, self.rect.centerx, self.rect.centery, 15, 20, -15)
         bullets.add(bullet)
         
 class Enemy(GameSprite):
    # движение врага
-   def update(self):
-       self.rect.y += self.speed
-       global lost
-       # исчезает, если дойдет до края экрана
-       if self.rect.y > win_width:
-           self.rect.y = randint(80, win_height - 80)
-           self.rect.x = 0
-           lost = lost + 1
+    def update(self):
+        self.rect.x -= self.speed
+        global lost
+        # исчезает, если дойдет до края экрана
+        if self.rect.y > win_width:
+            self.rect.y = 372
+            self.rect.x = 0
+            lost = lost + 1
+    def enemyfire(self):
+        enemy_bullet = EnemyBullet(img_enemy_bullet, self.rect.centerx, self.rect.top, 15, 20, -15)
+        enemy_bullets.add(enemy_bullet)
 
 # класс спрайта-пули  
 class Bullet(GameSprite):
-   # движение врага
+   # движение
    def update(self):
-       self.rect.x += self.speed
+       self.rect.x -= self.speed
        # исчезает, если дойдет до края экрана
        if self.rect.x < 0:
            self.kill()
-        
+
+class EnemyBullet(GameSprite):
+   # движение
+   def update(self):
+       self.rect.x += self.speed
+       # исчезает, если дойдет до края экрана
+       if self.rect.x > 1000:
+           self.kill()
+
 win_width = 700
 win_height = 500
 display.set_caption("Mafia")
@@ -66,14 +94,16 @@ window = display.set_mode((win_width, win_height))
 background = transform.scale(image.load(img_back), (win_width, win_height))
 clock = time.Clock()
 
-tommy = Player('Mafia.jpg', 5, win_height - 120, 100, 120, 30)
+tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
 
 monsters = sprite.Group()
 for i in range(1, 3):
-   monster = Enemy(img_enemy, randint(80, win_height - 80), -40, 80, 50, randint(1, 5))
+   monster = Enemy(img_enemy, 750, 372, 100, 130, randint(5, 6))
    monsters.add(monster)
    
 bullets = sprite.Group()
+
+enemy_bullets = sprite.Group()
 
 # переменная "игра закончилась": как только там True, в основном цикле перестают работать спрайты
 finish = False
@@ -82,7 +112,11 @@ run = True # флаг сбрасывается кнопкой закрытия �
 
 rel_time = False # флаг отвечающий за перезарядку
 
+enemy_rel_time = False
+
 num_fire = 0  # переменная для подсчта выстрела          
+
+enemy_num_fire = 0
 
 while run:
 
@@ -93,17 +127,27 @@ while run:
         # событие нажатия на w - спрайт стреляет
         elif e.type == KEYDOWN:
             if e.key == K_w:
-                    # проверяем сколько выстеров сделано и не происходит ли перезарядка
-                    if num_fire < 5 and rel_time == False:
-                        num_fire = num_fire + 1
-                        fire_sound.play()
-                        ship.fire()
+                # проверяем сколько выстеров сделано и не происходит ли перезарядка
+                if num_fire < 10 and rel_time == False:
+                    num_fire = num_fire + 1
+                    tommy.fire()
                        
-                    if num_fire  >= 5 and rel_time == False : # если игрок сделал 5 выстрелов
-                        last_time = timer() # засекаем время, когда это произошло
-                        rel_time = True # ставив флаг перезарядки
-                    
- if not finish:
+                if num_fire  >= 10 and rel_time == False : # если игрок сделал 5 выстрелов
+                    last_time = timer() # засекаем время, когда это произошло
+                    rel_time = True # ставив флаг перезарядки
+            if e.key == K_e:
+                tommy = Player(img_laying, 5, win_height - 75, 190, 90, 30)
+                tommy_last_time = timer()
+
+    while enemy_num_fire < 1 and enemy_rel_time == False:
+        enemy_num_fire = enemy_num_fire + 1
+        monster.enemyfire()
+                       
+    while enemy_num_fire  >= 1 and enemy_rel_time == False : # если игрок сделал 5 выстрелов
+        enemy_last_time = timer() # засекаем время, когда это произошло
+        enemy_rel_time = True # ставив флаг перезарядки
+
+    if not finish:
 
         # обновляем фон
         window.blit(background,(0,0))
@@ -112,18 +156,38 @@ while run:
         tommy.update()
         monsters.update()
         bullets.update()
+        enemy_bullets.update()
 
         # обновляем их в новом местоположении при каждой итерации цикла
         tommy.reset()
         monsters.draw(window)
         bullets.draw(window)
+        enemy_bullets.draw(window)
 
         # перезарядка
+        if enemy_rel_time == True:
+            enemy_now_time = timer() # считываем время
+         
+            if enemy_now_time - enemy_last_time < 3: # пока не прошло 3 секунды выводим информацию о перезарядке
+                reload = font2.render('', 1, (150, 0, 0))
+                window.blit(reload, (260, 460))
+            else:
+                enemy_num_fire = 0   # обнуляем счетчик пуль
+                enemy_rel_time = False # сбрасываем флаг перезарядки
+        
+        if tommy == Player(img_laying, 5, win_height - 75, 190, 90, 30):
+            tommy_now_time = timer()
+            if tommy_now_time - tommy_last_time < 3:
+                reload = font2.render('', 1, (150, 0, 0))
+                window.blit(reload, (260, 460))
+            else:
+                tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
+
         if rel_time == True:
             now_time = timer() # считываем время
          
             if now_time - last_time < 3: # пока не прошло 3 секунды выводим информацию о перезарядке
-                reload = font2.render('Reloading...', 1, (150, 0, 0))
+                reload = font2.render('Перезарядка', 1, (150, 0, 0))
                 window.blit(reload, (260, 460))
             else:
                 num_fire = 0   # обнуляем счетчик пуль
@@ -134,23 +198,20 @@ while run:
         for c in collides:
             # этот цикл повторится столько раз, сколько монстров подбито
             score = score + 1
-            monster = Enemy(img_enemy, randint(80, win_height - 80), -40, 80, 50, randint(1, 5))
+            monster = Enemy(img_enemy, 750, 372, 100, 130, randint(5, 6))
             monsters.add(monster)
 
-
-        '''
-        # возможный проигрыш: пропустили слишком много или герой столкнулся с врагом или астероидом
-        if sprite.spritecollide(tommy, monsters, False) or lost >= max_lost:
-            finish = True # проиграли, ставим фон и больше не управляем спрайтами.
-            window.blit(lose, (200, 200))
-        '''
         # если спрайт коснулся врага уменьшает жизнь
-        if sprite.spritecollide(tommy, monsters, False) or sprite.spritecollide(ship, asteroids, False):
-            sprite.spritecollide(ship, tommy, True) 
+        if sprite.spritecollide(tommy, monsters, False):
+            sprite.spritecollide(tommy, monsters, True) 
+            life = life -1
+
+        if sprite.spritecollide(tommy, enemy_bullets, False):
+            sprite.spritecollide(tommy, enemy_bullets, True) 
             life = life -1
 
         #проигрыш
-        if life == 0 or lost >= max_lost:
+        if life <= 0 or lost >= max_lost:
             finish = True # проиграли, ставим фон и больше не управляем спрайтами.
             window.blit(lose, (200, 200))
 
@@ -161,23 +222,8 @@ while run:
             window.blit(win, (200, 200))
 
         # пишем текст на экране
-        text = font2.render("Счет: " + str(score), 1, (255, 255, 255))
+        text = font2.render("Убийств: " + str(score), 1, (255, 255, 255))
         window.blit(text, (10, 20))
-
-        text_lose = font2.render("Пропущено: " + str(lost), 1, (255, 255, 255))
-        window.blit(text_lose, (10, 50))
-
-        # задаем разный цвет в зависимости от кол-ва жизней
-        if life == 3:
-            life_color = (0, 150, 0)
-        if life == 2:
-            life_color = (150, 150, 0)
-        if life == 1:
-            life_color = (150, 0, 0)
-
-        
-        text_life = font1.render(str(life), 1, life_color)
-        window.blit(text_life, (650, 10))
 
         display.update()
 
@@ -191,14 +237,11 @@ while run:
         for b in bullets:
             b.kill()
         for m in monsters:
-            m.kill()
-        for a in asteroids:
-            a.kill()    
-      
+            m.kill() 
 
         time.delay(3000)
         for i in range(1, 3):
-            monster = Enemy(img_enemy, randint(80, win_height - 80), -40, 80, 50, randint(1, 5))
+            monster = Enemy(img_enemy, 750, 372, 100, 130, randint(5, 6))
             monsters.add(monster)  
 
-    time.delay(50)
+    time.delay(60)
