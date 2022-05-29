@@ -3,11 +3,12 @@ from time import time as timer
 from random import randint
 
 font.init()
-font1 = font.SysFont('Arial', 80)
+font1 = font.SysFont('Arial', 60)
 font2 = font.SysFont('Arial', 36)
+font3 = font.SysFont('Arial', 12)
 win = font1.render('ГЛАВА ЗАВЕРШЕНА...', True, (255, 255, 255))
 lose = font1.render('ВЫ ПОГИБЛИ!', True, (180, 0, 0))
-helping = font1.render('НАЖМИТЕ Enter', True, (255, 255, 255))
+helping = font3.render('НАЖМИТЕ Enter', True, (255, 255, 255))
 
 img_back = 'town.png'
 img_mafia = 'mafia.png'
@@ -93,8 +94,8 @@ class Vechicle(GameSprite):
         self.rect.x -= self.speed
         if self.rect.x < 0:
             self.kill()
-            window.blit(win, (5, 200))
             finish = True
+            window.blit(win, (10, 200))
 
 win_width = 700
 win_height = 500
@@ -105,7 +106,7 @@ clock = time.Clock()
 
 tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
 
-car = Vechicle(img_car, 750, 325, 368, 189, 0)
+car = Vechicle(img_car, 1000, 325, 368, 189, 0)
 
 monsters = sprite.Group()
 for i in range(1, 6):
@@ -150,7 +151,9 @@ while run:
                 tommy = Player(img_laying, 5, win_height - 75, 190, 90, 30)
                 tommy_last_time = timer()
             if e.key == K_RETURN:
-                car = Vechicle(img_car, 750, 325, 368, 189, 10)
+                car = Vechicle(img_car, 1000, 325, 368, 189, 10)
+            if e.key == K_f:
+                tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
 
     while enemy_num_fire < 1 and enemy_rel_time == False:
         enemy_num_fire = enemy_num_fire + 1
@@ -167,17 +170,17 @@ while run:
 
         # производим движения спрайтов
         tommy.update()
-        car.update()
         monsters.update()
         bullets.update()
         enemy_bullets.update()
+        car.update()
 
         # обновляем их в новом местоположении при каждой итерации цикла
         tommy.reset()
-        car.reset()
         monsters.draw(window)
         bullets.draw(window)
         enemy_bullets.draw(window)
+        car.reset()
 
         # перезарядка
         if enemy_rel_time == True:
@@ -189,14 +192,6 @@ while run:
             else:
                 enemy_num_fire = 0   # обнуляем счетчик пуль
                 enemy_rel_time = False # сбрасываем флаг перезарядки
-        
-        if tommy == Player(img_laying, 5, win_height - 75, 190, 90, 30):
-            tommy_now_time = timer()
-            if tommy_now_time - tommy_last_time < 3:
-                reload = font2.render('', 1, (150, 0, 0))
-                window.blit(reload, (260, 460))
-            elif tommy_now_time - tommy_last_time >= 3:
-                tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
 
         if rel_time == True:
             now_time = timer() # считываем время
@@ -225,15 +220,20 @@ while run:
             sprite.spritecollide(tommy, enemy_bullets, True) 
             life = life -1
 
+        if sprite.spritecollide(car, monsters, False):
+            sprite.spritecollide(car, monsters, True)
+
+        if sprite.spritecollide(car, enemy_bullets, False):
+            sprite.spritecollide(car, enemy_bullets, True)
+
         #проигрыш
         if life <= 0 or lost >= max_lost:
             finish = True # проиграли, ставим фон и больше не управляем спрайтами.
             window.blit(lose, (110, 200))
 
-
         # проверка выигрыша: сколько очков набрали?
         if score >= goal:
-            window.blit(helping, (55, 200))
+            window.blit(helping, (580, 480))
 
         # пишем текст на экране
         text = font2.render("Убийств: " + str(score), 1, (255, 255, 255))
@@ -252,6 +252,10 @@ while run:
             b.kill()
         for m in monsters:
             m.kill() 
+
+        tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
+
+        car = Vechicle(img_car, 1000, 325, 368, 189, 0)
 
         time.delay(40)
         for i in range(1, 6):
