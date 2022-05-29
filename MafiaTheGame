@@ -5,8 +5,9 @@ from random import randint
 font.init()
 font1 = font.SysFont('Arial', 80)
 font2 = font.SysFont('Arial', 36)
-win = font1.render('YOU WIN!', True, (255, 255, 255))
-lose = font1.render('YOU LOSE!', True, (180, 0, 0))
+win = font1.render('ГЛАВА ЗАВЕРШЕНА...', True, (255, 255, 255))
+lose = font1.render('ВЫ ПОГИБЛИ!', True, (180, 0, 0))
+helping = font1.render('НАЖМИТЕ Enter', True, (255, 255, 255))
 
 img_back = 'town.png'
 img_mafia = 'mafia.png'
@@ -14,12 +15,12 @@ img_enemy = 'enemy.png'
 img_bullet = 'bullet.png'
 img_laying = 'mafialaying.png'
 img_enemy_bullet = 'enemybullet.png'
+img_car = 'car.png'
 life = 1
 lost = 0
 max_lost = 1
 goal = 100
 score = 0
-laying = 0
 
 # класс-родитель для других спрайтов
 class GameSprite(sprite.Sprite):
@@ -87,6 +88,14 @@ class EnemyBullet(GameSprite):
        if self.rect.x > 1000:
            self.kill()
 
+class Vechicle(GameSprite):
+    def update(self):
+        self.rect.x -= self.speed
+        if self.rect.x < 0:
+            self.kill()
+            window.blit(win, (5, 200))
+            finish = True
+
 win_width = 700
 win_height = 500
 display.set_caption("Mafia")
@@ -96,9 +105,11 @@ clock = time.Clock()
 
 tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
 
+car = Vechicle(img_car, 750, 325, 368, 189, 0)
+
 monsters = sprite.Group()
-for i in range(1, 3):
-   monster = Enemy(img_enemy, 750, 372, 100, 130, randint(5, 6))
+for i in range(1, 6):
+   monster = Enemy(img_enemy, 750, 372, 100, 130, randint(3, 6))
    monsters.add(monster)
    
 bullets = sprite.Group()
@@ -138,6 +149,8 @@ while run:
             if e.key == K_e:
                 tommy = Player(img_laying, 5, win_height - 75, 190, 90, 30)
                 tommy_last_time = timer()
+            if e.key == K_RETURN:
+                car = Vechicle(img_car, 750, 325, 368, 189, 10)
 
     while enemy_num_fire < 1 and enemy_rel_time == False:
         enemy_num_fire = enemy_num_fire + 1
@@ -154,12 +167,14 @@ while run:
 
         # производим движения спрайтов
         tommy.update()
+        car.update()
         monsters.update()
         bullets.update()
         enemy_bullets.update()
 
         # обновляем их в новом местоположении при каждой итерации цикла
         tommy.reset()
+        car.reset()
         monsters.draw(window)
         bullets.draw(window)
         enemy_bullets.draw(window)
@@ -180,7 +195,7 @@ while run:
             if tommy_now_time - tommy_last_time < 3:
                 reload = font2.render('', 1, (150, 0, 0))
                 window.blit(reload, (260, 460))
-            else:
+            elif tommy_now_time - tommy_last_time >= 3:
                 tommy = Player(img_mafia, 5, win_height - 190, 100, 190, 30)
 
         if rel_time == True:
@@ -213,13 +228,12 @@ while run:
         #проигрыш
         if life <= 0 or lost >= max_lost:
             finish = True # проиграли, ставим фон и больше не управляем спрайтами.
-            window.blit(lose, (200, 200))
+            window.blit(lose, (110, 200))
 
 
         # проверка выигрыша: сколько очков набрали?
         if score >= goal:
-            finish = True
-            window.blit(win, (200, 200))
+            window.blit(helping, (55, 200))
 
         # пишем текст на экране
         text = font2.render("Убийств: " + str(score), 1, (255, 255, 255))
@@ -233,15 +247,15 @@ while run:
         score = 0
         lost = 0
         num_fire = 0
-        life = 3
+        life = 1
         for b in bullets:
             b.kill()
         for m in monsters:
             m.kill() 
 
-        time.delay(3000)
-        for i in range(1, 3):
-            monster = Enemy(img_enemy, 750, 372, 100, 130, randint(5, 6))
+        time.delay(40)
+        for i in range(1, 6):
+            monster = Enemy(img_enemy, 750, 372, 100, 130, randint(3, 6))
             monsters.add(monster)  
 
-    time.delay(60)
+    time.delay(40)
